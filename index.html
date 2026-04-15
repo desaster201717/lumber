@@ -9,10 +9,19 @@
 <body>
     <div id="game-container"></div>
 
+    <!-- HUD -->
     <div id="ui-overlay">
         <div id="gold-display">Gold: <span id="gold-amount">0</span></div>
+        <div id="inventory-panel">
+            <span class="panel-label">Rucksack</span>
+            <span id="inventory-display">leer</span>
+        </div>
     </div>
 
+    <!-- Controls hint (bottom-right) -->
+    <div id="controls-hint">Joystick: Bewegen  •  Blaue Zone: Einlagern  •  Grüne Zone: Abholen</div>
+
+    <!-- Virtual Joystick -->
     <div id="joystick-wrapper">
         <div id="joystick-base">
             <div id="joystick-knob"></div>
@@ -22,8 +31,7 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
             }
         }
     </script>
