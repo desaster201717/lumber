@@ -1021,13 +1021,25 @@ class Game {
             cost:       500,
             label:      '🏭 Werkstatt freischalten',
             onComplete: () => {
-                this.machines.push(new Machine(this.scene, {
+                const workshop = new Machine(this.scene, {
                     name:        'Werkstatt',
                     position:    new THREE.Vector3(16, 0, -8),
                     inputType:   'BOARD',
                     outputType:  'TABLE',
                     color:       0x5c4033,
                     processTime: 5000,
+                });
+                this.machines.push(workshop);
+
+                // Add conveyor belt upgrade after workshop is built
+                this.buyZones.push(new BuyZone(this.scene, {
+                    position:   new THREE.Vector3(12, 0, -4),
+                    cost:       750,
+                    label:      '⚙ Auto-Transport III',
+                    onComplete: () => {
+                        const hobelmaschine = this.machines.find(m => m.name === 'Hobelmaschine');
+                        this.conveyors.push(new ConveyorBelt(this.scene, hobelmaschine, workshop));
+                    },
                 }));
             },
         }));
