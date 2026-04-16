@@ -108,11 +108,11 @@ class Joystick {
 // ─── RESOURCES ────────────────────────────────────────────────────────────────
 
 const RESOURCE_TYPES = {
-    LOG:    { color: 0x8b4513, size: [0.6, 0.3,  0.3 ], name: 'Log'   },
-    PLANK:  { color: 0xdeb887, size: [0.7, 0.1,  0.4 ], name: 'Plank' },
-    BOARD:  { color: 0xf5deb3, size: [0.5, 0.05, 0.5 ], name: 'Board' },
-    BARREL: { color: 0x654321, size: [0.4, 0.5,  0.4 ], name: 'Barrel'},
-    TABLE:  { color: 0x5c4033, size: [0.8, 0.4,  0.6 ], name: 'Table' },
+    LOG:    { color: 0x8b4513, size: [0.6, 0.3,  0.3 ], name: 'Holzstamm' },
+    PLANK:  { color: 0xdeb887, size: [0.7, 0.1,  0.4 ], name: 'Planke'    },
+    BOARD:  { color: 0xf5deb3, size: [0.5, 0.05, 0.5 ], name: 'Brett'     },
+    BARREL: { color: 0x654321, size: [0.4, 0.5,  0.4 ], name: 'Fass'      },
+    TABLE:  { color: 0x5c4033, size: [0.8, 0.4,  0.6 ], name: 'Tisch'     },
 };
 
 class Resource {
@@ -165,10 +165,10 @@ class Player {
         this.mesh             = this._buildMesh();
         this.scene.add(this.mesh);
         this.stack            = [];
-        this.carryCapacity    = 10;
+        this.carryCapacity    = 20;
         this.stackGroup       = new THREE.Group();
         this.mesh.add(this.stackGroup);
-        this.stackGroup.position.set(0, 1.2, -0.4);
+        this.stackGroup.position.set(0, 0.7, -0.45);
         this.lastTransferTime = 0;
         this.transferCooldown = 150;
         this.BOUNDS           = 44;
@@ -177,41 +177,50 @@ class Player {
     _buildMesh() {
         const g = new THREE.Group();
 
-        // Body
+        // Body - more rounded
         const body = new THREE.Mesh(
-            new THREE.CapsuleGeometry(0.4, 1, 4, 8),
-            new THREE.MeshStandardMaterial({ color: 0x2255ee })
+            new THREE.SphereGeometry(0.5, 16, 12),
+            new THREE.MeshStandardMaterial({ color: 0x3366ff, roughness: 0.4 })
         );
-        body.position.y = 0.9;
+        body.scale.set(1, 1.2, 0.8);
+        body.position.y = 0.6;
         body.castShadow = true;
         g.add(body);
 
-        // Arms
-        for (const x of [-0.55, 0.55]) {
-            const arm = new THREE.Mesh(
-                new THREE.CapsuleGeometry(0.1, 0.5, 4, 8),
-                new THREE.MeshStandardMaterial({ color: 0x2255ee })
-            );
-            arm.position.set(x, 1, 0);
-            g.add(arm);
-        }
+        // Backpack
+        const backpack = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 0.7, 0.4),
+            new THREE.MeshStandardMaterial({ color: 0x8b4513 })
+        );
+        backpack.position.set(0, 0.7, -0.4);
+        g.add(backpack);
 
         // Head
         const head = new THREE.Mesh(
-            new THREE.SphereGeometry(0.3, 16, 16),
+            new THREE.SphereGeometry(0.35, 16, 16),
             new THREE.MeshStandardMaterial({ color: 0xffdbac })
         );
-        head.position.y = 1.75;
+        head.position.y = 1.35;
         head.castShadow = true;
         g.add(head);
 
-        // Front indicator (nose) – shows facing direction
-        const nose = new THREE.Mesh(
-            new THREE.BoxGeometry(0.1, 0.1, 0.2),
-            new THREE.MeshStandardMaterial({ color: 0x222222 })
+        // Eyes
+        for (const x of [-0.12, 0.12]) {
+            const eye = new THREE.Mesh(
+                new THREE.SphereGeometry(0.05, 8, 8),
+                new THREE.MeshStandardMaterial({ color: 0x000000 })
+            );
+            eye.position.set(x, 1.4, 0.3);
+            g.add(eye);
+        }
+
+        // Hat
+        const hat = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.36, 0.36, 0.1, 16),
+            new THREE.MeshStandardMaterial({ color: 0xee2222 })
         );
-        nose.position.set(0, 1.75, 0.31);
-        g.add(nose);
+        hat.position.y = 1.65;
+        g.add(hat);
 
         return g;
     }
@@ -236,6 +245,20 @@ class Player {
         this.stackGroup.add(mesh);
         this.stack.push(mesh);
         updateInventoryHUD(this.stack);
+
+        // Juice: Pop animation for the new item
+        const baseScale = mesh.scale.clone();
+        mesh.scale.multiplyScalar(0.1);
+        const t0 = Date.now();
+        const anim = () => {
+            const p = Math.min((Date.now() - t0) / 200, 1);
+            const s = p < 0.5 ? 1.2 * (p * 2) : 1.2 - 0.2 * ((p - 0.5) * 2);
+            mesh.scale.copy(baseScale).multiplyScalar(s);
+            if (p < 1) requestAnimationFrame(anim);
+            else mesh.scale.copy(baseScale);
+        };
+        anim();
+
         return true;
     }
 
@@ -293,42 +316,73 @@ class Machine {
     _buildMesh(color) {
         const g = new THREE.Group();
 
+        // Main body with rounded corners effect using multiple boxes or just one styled one
         const body = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 1.5, 2),
-            new THREE.MeshStandardMaterial({ color: color ?? 0x777777 })
+            new THREE.BoxGeometry(2.2, 1.6, 2.2),
+            new THREE.MeshStandardMaterial({ color: color ?? 0x777777, roughness: 0.2 })
         );
-        body.position.y  = 0.75;
-        body.castShadow  = true;
+        body.position.y = 0.8;
+        body.castShadow = true;
         body.receiveShadow = true;
         g.add(body);
 
-        const chimney = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.2, 0.25, 1.2, 8),
-            new THREE.MeshStandardMaterial({ color: 0x2a2a2a })
+        // Decorative "bolts" or details
+        const detailG = new THREE.Group();
+        for (let x of [-0.9, 0.9]) {
+            for (let z of [-0.9, 0.9]) {
+                const bolt = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, 0.1, 0.1, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x333333 })
+                );
+                bolt.position.set(x, 1.6, z);
+                detailG.add(bolt);
+            }
+        }
+        g.add(detailG);
+
+        this.chimney = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.25, 0.3, 1.2, 8),
+            new THREE.MeshStandardMaterial({ color: 0x333333 })
         );
-        chimney.position.set(0.55, 2.1, 0.55);
-        g.add(chimney);
+        this.chimney.position.set(0.6, 2.2, 0.6);
+        g.add(this.chimney);
+
+        // Funnel at top of chimney
+        const funnel = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.4, 0.25, 0.4, 8),
+            new THREE.MeshStandardMaterial({ color: 0x222222 })
+        );
+        funnel.position.y = 0.6;
+        this.chimney.add(funnel);
 
         // Progress bar background
         const barBg = new THREE.Mesh(
-            new THREE.BoxGeometry(1.6, 0.14, 0.12),
-            new THREE.MeshStandardMaterial({ color: 0x111111 })
+            new THREE.BoxGeometry(1.6, 0.2, 0.15),
+            new THREE.MeshStandardMaterial({ color: 0x222222 })
         );
-        barBg.position.set(0, 2.1, 0);
+        barBg.position.set(0, 2.2, 0);
         g.add(barBg);
 
         this.progressFill = new THREE.Mesh(
-            new THREE.BoxGeometry(1.5, 0.1, 0.1),
-            new THREE.MeshStandardMaterial({ color: 0x00dd55, emissive: 0x004411 })
+            new THREE.BoxGeometry(1.5, 0.14, 0.12),
+            new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x006622 })
         );
-        this.progressFill.position.set(0, 2.1, 0);
+        this.progressFill.position.set(0, 2.2, 0);
         this.progressFill.scale.x = 0.001;
         g.add(this.progressFill);
 
+        // Base/Feet
+        const base = new THREE.Mesh(
+            new THREE.BoxGeometry(2.4, 0.2, 2.4),
+            new THREE.MeshStandardMaterial({ color: 0x444444 })
+        );
+        base.position.y = 0.1;
+        g.add(base);
+
         // Input zone (blue)
-        g.add(this._makeZone(0x2266ff, -1.5));
+        g.add(this._makeZone(0x3388ff, -1.8));
         // Output zone (green)
-        g.add(this._makeZone(0x22cc44, 1.5));
+        g.add(this._makeZone(0x33ff88, 1.8));
 
         return g;
     }
@@ -383,9 +437,17 @@ class Machine {
         this.inputCount--;
         const t0 = Date.now();
         const tick = () => {
-            const p = Math.min((Date.now() - t0) / this.processTime, 1);
+            const elapsed = Date.now() - t0;
+            const p = Math.min(elapsed / this.processTime, 1);
+
             this.progressFill.scale.x   = Math.max(p, 0.001);
             this.progressFill.position.x = -0.75 + p * 0.75;
+
+            // Wobble effect
+            const wobble = Math.sin(elapsed * 0.02) * 0.03;
+            this.mesh.scale.set(1 + wobble, 1 - wobble, 1 + wobble);
+            this.chimney.rotation.z = Math.sin(elapsed * 0.03) * 0.1;
+
             if (p < 1) {
                 requestAnimationFrame(tick);
             } else {
@@ -393,6 +455,8 @@ class Machine {
                 this.isProcessing          = false;
                 this.progressFill.scale.x  = 0.001;
                 this.progressFill.position.x = 0;
+                this.mesh.scale.set(1, 1, 1);
+                this.chimney.rotation.z = 0;
             }
         };
         requestAnimationFrame(tick);
@@ -451,9 +515,17 @@ class SourceMachine extends Machine {
         this.isProcessing = true;
         const t0 = Date.now();
         const tick = () => {
-            const p = Math.min((Date.now() - t0) / this.processTime, 1);
+            const elapsed = Date.now() - t0;
+            const p = Math.min(elapsed / this.processTime, 1);
+
             this.progressFill.scale.x   = Math.max(p, 0.001);
             this.progressFill.position.x = -0.75 + p * 0.75;
+
+            // Wobble effect
+            const wobble = Math.sin(elapsed * 0.02) * 0.03;
+            this.mesh.scale.set(1 + wobble, 1 - wobble, 1 + wobble);
+            this.chimney.rotation.z = Math.sin(elapsed * 0.03) * 0.1;
+
             if (p < 1) {
                 requestAnimationFrame(tick);
             } else {
@@ -461,6 +533,8 @@ class SourceMachine extends Machine {
                 this.isProcessing          = false;
                 this.progressFill.scale.x  = 0.001;
                 this.progressFill.position.x = 0;
+                this.mesh.scale.set(1, 1, 1);
+                this.chimney.rotation.z = 0;
             }
         };
         requestAnimationFrame(tick);
@@ -469,7 +543,7 @@ class SourceMachine extends Machine {
     _statusLines() {
         const outName = RESOURCE_TYPES[this.outputType].name;
         return [
-            `Produces ${outName}`,
+            `Produziert ${outName}`,
             `Verfügbar: ${this.outputCount}/${this.outputCapacity}`,
         ];
     }
@@ -600,7 +674,7 @@ class BuyZone {
             [this.label, `Kosten: ${this.cost} 🪙`, `0% bezahlt`],
             { width: 230, height: 78, bg: 'rgba(15,12,0,0.9)', titleColor: '#ffd700', fg: '#ccc' }
         );
-        this.costLabel.position.set(0, 2.2, 0);
+        this.costLabel.position.set(0, 2.8, 0);
         this.mesh.add(this.costLabel);
     }
 
@@ -663,38 +737,56 @@ class SellingStation {
     _buildMesh() {
         const g = new THREE.Group();
 
-        // Floor zone
+        // Floor zone - more vibrant
         const floor = new THREE.Mesh(
-            new THREE.BoxGeometry(4, 0.06, 4),
-            new THREE.MeshStandardMaterial({ color: 0x00ff88, transparent: true, opacity: 0.18 })
+            new THREE.CircleGeometry(2.5, 32),
+            new THREE.MeshStandardMaterial({ color: 0x00ff88, transparent: true, opacity: 0.25 })
         );
-        floor.position.y = 0.03;
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = 0.02;
         g.add(floor);
 
-        // Stall
+        // Stall body
         const stall = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 2, 1),
-            new THREE.MeshStandardMaterial({ color: 0x7a3b10 })
+            new THREE.BoxGeometry(3, 1.8, 1.2),
+            new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 })
         );
-        stall.position.set(0, 1, -1.5);
+        stall.position.set(0, 0.9, -1.4);
         stall.castShadow = true;
         g.add(stall);
 
-        // Roof
-        const roof = new THREE.Mesh(
-            new THREE.BoxGeometry(2.6, 0.22, 1.7),
-            new THREE.MeshStandardMaterial({ color: 0xbb2200 })
-        );
-        roof.position.set(0, 2.12, -1.5);
-        g.add(roof);
+        // Striped Roof
+        const roofGroup = new THREE.Group();
+        roofGroup.position.set(0, 2.0, -1.0);
+        g.add(roofGroup);
+
+        for (let i = 0; i < 5; i++) {
+            const stripe = new THREE.Mesh(
+                new THREE.BoxGeometry(0.7, 0.15, 1.8),
+                new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0xee2222 : 0xffffff })
+            );
+            stripe.position.x = -1.4 + i * 0.7;
+            stripe.rotation.x = 0.2;
+            roofGroup.add(stripe);
+        }
 
         // Counter
         const counter = new THREE.Mesh(
-            new THREE.BoxGeometry(1.8, 0.15, 0.6),
+            new THREE.BoxGeometry(2.8, 0.15, 0.8),
             new THREE.MeshStandardMaterial({ color: 0x5c3a1e })
         );
-        counter.position.set(0, 1.0, -0.9);
+        counter.position.set(0, 1.0, -0.7);
         g.add(counter);
+
+        // Decorative coins on counter
+        for (let i = 0; i < 3; i++) {
+            const coin = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.1, 0.1, 0.05, 12),
+                new THREE.MeshStandardMaterial({ color: 0xffd700 })
+            );
+            coin.position.set(-0.8 + i * 0.4, 1.1, -0.7);
+            g.add(coin);
+        }
 
         return g;
     }

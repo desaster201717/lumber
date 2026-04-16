@@ -1,0 +1,3 @@
+## 2025-05-14 - Visual Juice and Localization in 3D Tycoons
+**Learning:** Adding simple "juice" (scale-pop animations, procedural wobbles) to 3D models during state changes (inventory pick-up, machine processing) significantly enhances the tactile feel of a tycoon game. Additionally, German localization often results in longer strings that can break fixed-width UI elements, necessitating flexible layout containers.
+**Action:** Use frame-based scaling and rotation offsets in the main update loop for "juice" effects to ensure they are synchronized with game logic. Always test localized strings in the HUD to ensure text wrapping or scaling doesn't obscure vital information.
